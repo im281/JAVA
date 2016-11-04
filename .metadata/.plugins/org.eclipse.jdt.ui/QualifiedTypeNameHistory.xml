@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<qualifiedTypeNameHistroy>
+<fullyQualifiedTypeName name="scala.tools.nsc.transform.patmat.ScalaLogic.TreesAndTypesDomain.Var"/>
+<fullyQualifiedTypeName name="org.apache.spark.ml.regression.LinearRegression"/>
+<fullyQualifiedTypeName name="org.apache.spark.mllib.linalg.Matrices"/>
+<fullyQualifiedTypeName name="org.apache.spark.api.java.JavaRDD"/>
+<fullyQualifiedTypeName name="org.apache.spark.mllib.linalg.distributed.MatrixEntry"/>
+<fullyQualifiedTypeName name="java.awt.List"/>
+<fullyQualifiedTypeName name="java.lang.System"/>
+<fullyQualifiedTypeName name="org.apache.spark.ml.regression.GeneralizedLinearRegression"/>
+<fullyQualifiedTypeName name="org.apache.spark.mllib.linalg.SingularValueDecomposition"/>
+<fullyQualifiedTypeName name="org.apache.spark.mllib.optimization.NNLS"/>
+<fullyQualifiedTypeName name="org.apache.spark.mllib.optimization.NNLS.Workspace"/>
+<fullyQualifiedTypeName name="org.apache.spark.mllib.linalg.distributed.RowMatrix"/>
+<fullyQualifiedTypeName name="org.apache.spark.mllib.linalg.QRDecomposition"/>
+<fullyQualifiedTypeName name="org.apache.spark.mllib.linalg.DenseMatrix"/>
+<fullyQualifiedTypeName name="java.io.PrintWriter"/>
+</qualifiedTypeNameHistroy>

@@ -1,0 +1,210 @@
+package MatrixRevolutions;
+
+import org.apache.spark.mllib.linalg.Vector;
+import org.apache.spark.mllib.linalg.Vectors;
+import org.apache.spark.mllib.linalg.distributed.MatrixEntry;
+import org.apache.spark.mllib.linalg.distributed.RowMatrix;
+import org.apache.spark.mllib.linalg.Matrix;
+import org.apache.spark.mllib.linalg.QRDecomposition;
+import org.apache.spark.ml.regression.GeneralizedLinearRegression;
+import org.apache.spark.ml.regression.LinearRegression;
+import org.apache.spark.ml.regression.LinearRegressionModel;
+import org.apache.spark.mllib.linalg.DenseMatrix;
+import org.apache.spark.mllib.linalg.Matrices;
+
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaDoubleRDD;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.mllib.regression.LabeledPoint;
+import org.apache.spark.mllib.regression.LinearRegressionWithSGD;
+import org.apache.spark.rdd.RDD;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.mllib.linalg.distributed.BlockMatrix;
+import org.apache.spark.mllib.linalg.distributed.CoordinateMatrix;
+import org.apache.spark.mllib.linalg.distributed.IndexedRowMatrix;
+//import org.apache.spark.mllib.optimization;
+
+
+public class CoordinateMatrixDemo {
+
+	public static void main(String[] args) {
+
+		//boiler plate needed to run locally  
+		SparkConf conf = new SparkConf().setAppName("Simple Application").setMaster("local");
+		JavaSparkContext sc = new JavaSparkContext(conf);
+
+		SparkSession spark = SparkSession
+				.builder()
+				.appName("CoordinateMatrix")
+				.getOrCreate()
+				.newSession();
+
+		run(sc,"Data/sparsematrix.txt");
+	}
+
+
+	private static void run(JavaSparkContext sc, String file) {
+
+		//Read coordinate matrix from text or database
+		JavaRDD<String> fileA = sc.textFile(file);
+
+		//map text file with coordinate data (sparse matrix) to JavaRDD<MatrixEntry>
+		JavaRDD<MatrixEntry> matrixA = fileA.map(new Function<String, MatrixEntry>() {
+			public MatrixEntry call(String x){
+				String[] indeceValue = x.split(",");
+				long i = Long.parseLong(indeceValue[0]);
+				long j = Long.parseLong(indeceValue[1]);
+				double value = Double.parseDouble(indeceValue[2]);
+				return new MatrixEntry(i, j, value );
+			}
+		});
+
+		//coordinate matrix from sparse data
+		CoordinateMatrix cooMatrixA = new CoordinateMatrix(matrixA.rdd());
+
+		//create block matrix
+		BlockMatrix matA = cooMatrixA.toBlockMatrix();
+
+		//create block matrix after matrix multiplication (square matrix)
+		BlockMatrix ata = matA.transpose().multiply(matA);
+
+		//print out the original dense matrix
+		System.out.println(matA.toLocalMatrix().toString());
+
+		//print out the transpose of the dense matrix
+		System.out.println(matA.transpose().toLocalMatrix().toString());
+
+		//print out the square matrix (after multiplication)
+		System.out.println(ata.toLocalMatrix().toString());
+
+		JavaRDD<MatrixEntry> entries = ata.toCoordinateMatrix().entries().toJavaRDD();
+
+
+
+		//QR decomposition DEMO
+		// Convert it to an IndexRowMatrix whose rows are sparse vectors.
+		IndexedRowMatrix indexedRowMatrix = cooMatrixA.toIndexedRowMatrix();
+
+		// Drop its row indices.
+		RowMatrix rowMat = indexedRowMatrix .toRowMatrix();
+
+		// QR decomposition 
+		QRDecomposition<RowMatrix, Matrix> result = rowMat.tallSkinnyQR(true);
+
+		System.out.println("Q: " + result.Q().toBreeze().toString());
+		System.out.println("R: " + result.R().toString());
+
+		//compute Qt
+		//need to compute d = Qt*b where b is the experimental
+		//Then solve for d using Gaussian elimination    
+
+		//Extract Q values and create matrix
+		//TODO: THIS WONT Work! The array will be HUGE
+		String Qm = result.Q().toBreeze().toString();
+		String[] Qmatrix = Qm.split("\n", ' ');
+
+		//Read coordinate matrix from text or database
+		JavaRDD<String> fileQ = sc.textFile(Qm);
+
+		String qm = fileQ.toString();
+		/*try {
+			PrintWriter pw = new PrintWriter("Data/qMatrix.txt");
+
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}*/
+
+		//somehow map with coordinate data (sparse matrix) to JavaRDD<MatrixEntry>
+		/*JavaRDD<MatrixEntry> matrixQ = fileQ.map(new Function<String, MatrixEntry>() {
+			int row = 0;
+			int col = 0;
+			public MatrixEntry call(String x){
+				String[] indeceValue = x.split("\n", ' ');
+				long i = Long.parseLong(indeceValue[0]);
+				long j = Long.parseLong(indeceValue[1]);
+				double value = Double.parseDouble(indeceValue[2]);
+				row++;
+				return new MatrixEntry(i,j,value);
+			}
+		});*/
+
+		//coordinate matrix from sparse data
+		//CoordinateMatrix cooMatrixQ = new CoordinateMatrix(matrixQ.rdd());
+
+		//create block matrix
+		//BlockMatrix matQ = cooMatrixQ.toBlockMatrix();
+
+		//print out the original dense matrix
+		//System.out.println("Matrix Q!!!!   " +  matQ.toLocalMatrix().toString());
+
+
+		//create vector from coordinate matrix (text or database)
+		//Read coordinate matrix from text or database
+		JavaRDD<String> fileB = sc.textFile("Data/sparsevector.txt");
+
+		//map text file with coordinate data (sparse matrix) to JavaRDD<MatrixEntry>
+		JavaRDD<MatrixEntry> matrixV = fileB.map(new Function<String, MatrixEntry>() {
+			public MatrixEntry call(String x){
+				String[] indeceValue = x.split(",");
+				long i = Long.parseLong(indeceValue[0]);
+				long j = Long.parseLong(indeceValue[1]);
+				double value = Double.parseDouble(indeceValue[2]);
+				return new MatrixEntry(i, j, value );
+			}
+		});
+
+		//coordinate matrix from sparse data
+		CoordinateMatrix cooMatrixV = new CoordinateMatrix(matrixV.rdd());
+
+		//create block matrix
+		BlockMatrix matB = cooMatrixV.toBlockMatrix();
+
+		//we have A and b (Can solve Ax = b now)
+		//b is just a m x 1 matrix
+		Matrix v = matB.toLocalMatrix();	
+
+		System.out.println(v);
+
+		DenseMatrix r = (DenseMatrix) result.R();
+
+		System.out.println(r);
+
+		double[] A = r.toArray();    
+		double[] b = v.toArray();	    	    
+		double[][] m = new double[r.numRows()][r.numCols()];
+
+		int k = 0;
+		for(int i = 0; i < r.numRows();i++){
+			for(int j = 0;j < r.numCols();j++ ){
+				m[j][i] = A[k];
+				k++;
+			}
+		}
+
+
+
+		//NONE of these commands work!
+		//JavaRDD<String> output = entries.map(new Function<MatrixEntry, String>() {
+		//    public String call(MatrixEntry e) {
+		//        return String.format("%d,%d,%s", e.i(), e.j(), e.value());
+		//    }
+		//});
+
+		//entries.saveAsTextFile("Data/output1");
+		//output.saveAsTextFile("Data/output1");
+		//ata.toCoordinateMatrix().entries().toJavaRDD().saveAsTextFile("Data/Output1");	    
+
+	}		
+}
+
+
+
+
+

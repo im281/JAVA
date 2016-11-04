@@ -1,0 +1,70 @@
+package MatrixRevolutions;
+
+import org.apache.spark.mllib.linalg.Vector;
+import org.apache.spark.mllib.linalg.Vectors;
+import org.apache.spark.mllib.linalg.distributed.MatrixEntry;
+import org.apache.spark.mllib.linalg.Matrix;
+import org.apache.spark.ml.regression.LinearRegression;
+import org.apache.spark.ml.regression.LinearRegressionModel;
+import org.apache.spark.mllib.linalg.Matrices;
+
+
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaDoubleRDD;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.mllib.regression.LabeledPoint;
+import org.apache.spark.mllib.regression.LinearRegressionWithSGD;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.mllib.linalg.distributed.BlockMatrix;
+import org.apache.spark.mllib.linalg.distributed.CoordinateMatrix;
+import org.apache.spark.mllib.linalg.distributed.IndexedRowMatrix;
+
+public class CoordinateMatrixDemo {
+	
+	public static void main(String[] args) {
+		
+		
+		//boiler plate needed to run locally  
+		SparkConf conf = new SparkConf().setAppName("Simple Application").setMaster("local");
+		JavaSparkContext sc = new JavaSparkContext(conf);
+		  
+	    SparkSession spark = SparkSession
+	      .builder()
+	      .appName("CoordinateMatrix")
+	      .getOrCreate()
+	      .newSession();
+		
+		JavaRDD<String> fileA = sc.textFile("Data/sparsematrix.txt");
+
+		JavaRDD<MatrixEntry> matrixA = fileA.map(new Function<String, MatrixEntry>() {
+		    public MatrixEntry call(String x){
+		        String[] indeceValue = x.split(",");
+		        long i = Long.parseLong(indeceValue[0]);
+		        long j = Long.parseLong(indeceValue[1]);
+		        double value = Double.parseDouble(indeceValue[2]);
+		        return new MatrixEntry(i, j, value );
+		    }
+		});
+		
+		CoordinateMatrix cooMatrixA = new CoordinateMatrix(matrixA.rdd());
+		BlockMatrix matA = cooMatrixA.toBlockMatrix();
+		BlockMatrix ata = matA.transpose().multiply(matA);
+		
+		System.out.println(matA.toLocalMatrix().toString());
+		System.out.println(matA.transpose().toLocalMatrix().toString());
+		System.out.println(ata.toLocalMatrix().toString());
+		
+		JavaRDD<MatrixEntry> entries = ata.toCoordinateMatrix().entries().toJavaRDD();
+		//JavaRDD<String> output = entries.map(new Function<MatrixEntry, String>() {
+		//    public String call(MatrixEntry e) {
+		//        return String.format("%d,%d,%s", e.i(), e.j(), e.value());
+		//    }
+		//});
+		
+		entries.saveAsTextFile("Data/output1");
+		//output.saveAsTextFile("Data/output1");
+	}
+}
